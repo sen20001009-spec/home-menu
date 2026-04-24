@@ -53,6 +53,7 @@ const [cart,setCart]=React.useState({})
 const [orders,setOrders]=React.useState([])
 const [category,setCategory]=React.useState("全部")
 const [showCart,setShowCart]=React.useState(false)
+const [preview,setPreview]=React.useState(null)
 
 const categories=["全部",...new Set(menu.map(i=>i.category))]
 
@@ -147,8 +148,12 @@ const qty=cart[i.id]?.qty||0
 
 return(
 <div class="border m-2 rounded-xl overflow-hidden">
-<img src={i.image} class="w-full h-40 object-cover"/>
-
+<img 
+src={i.image} 
+class="w-full h-40 object-cover"
+onClick={()=>setPreview(i)}
+/>
+  
 <div class="p-2 flex justify-between">
 <div>
 <div class="font-bold">{i.name}</div>
@@ -220,6 +225,28 @@ setShowCart(false)
 </div>
 
 )}
+...
+)}
+
+{preview && (
+
+<div 
+class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center"
+onClick={()=>setPreview(null)}
+>
+
+<img 
+src={preview.image}
+class="max-w-full max-h-full rounded"
+/>
+
+</div>
+
+)}
+
+</div>
+)
+}
 
 </div>
 )
