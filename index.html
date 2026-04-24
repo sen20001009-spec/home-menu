@@ -3,9 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>点菜菜单</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
 <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -13,25 +16,28 @@
 </head>
 
 <body>
-
 <div id="root"></div>
 
 <script type="text/babel">
 
+const firebaseConfig = {
+apiKey: "AIzaSyDkMpnfSC_uQU4869GHmxbz9TIDfMDNoG4",
+authDomain: "menu-7fc98.firebaseapp.com",
+projectId: "menu-7fc98",
+storageBucket: "menu-7fc98.firebasestorage.app",
+messagingSenderId: "1059212365850",
+appId: "1:1059212365850:web:98a1c41a406d026d5c01a3"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
 const menu = [
-
-{ id:1,name:"红烧肉",price:38,category:"热菜",image:"https://images.unsplash.com/photo-1604908176997-431c3c1d76fd?q=80&w=800"},
-
-{ id:2,name:"宫保鸡丁",price:32,category:"热菜",image:"https://images.unsplash.com/photo-1603133872878-684f208fb84b?q=80&w=800"},
-
-{ id:3,name:"番茄炒蛋",price:18,category:"热菜",image:"https://images.unsplash.com/photo-1625944525903-b0f5dc4f9b9c?q=80&w=800"},
-
-{ id:4,name:"拍黄瓜",price:12,category:"凉菜",image:"https://images.unsplash.com/photo-1559847844-5315695dadae?q=80&w=800"},
-
-{ id:5,name:"米饭",price:2,category:"主食",image:"https://images.unsplash.com/photo-1604909053197-8b4d7e3b2a8f?q=80&w=800"},
-
-{ id:6,name:"可乐",price:5,category:"饮料",image:"https://images.unsplash.com/photo-1622484212850-eb596d769edc?q=80&w=800"}
-
+{ id:1,name:"红烧肉",price:38,category:"热菜",image:"https://images.unsplash.com/photo-1604908176997-431c3c1d76fd"},
+{ id:2,name:"宫保鸡丁",price:32,category:"热菜",image:"https://images.unsplash.com/photo-1603133872878-684f208fb84b"},
+{ id:3,name:"拍黄瓜",price:12,category:"凉菜",image:"https://images.unsplash.com/photo-1559847844-5315695dadae"},
+{ id:4,name:"米饭",price:2,category:"主食",image:"https://images.unsplash.com/photo-1604909053197-8b4d7e3b2a8f"},
+{ id:5,name:"可乐",price:5,category:"饮料",image:"https://images.unsplash.com/photo-1622484212850-eb596d769edc"}
 ]
 
 function App(){
@@ -41,28 +47,17 @@ const isAdmin = window.location.hash === "#admin"
 const [cart,setCart]=React.useState({})
 const [orders,setOrders]=React.useState([])
 const [category,setCategory]=React.useState("全部")
-const [showCart,setShowCart]=React.useState(false)
 
 const categories=["全部",...new Set(menu.map(i=>i.category))]
 
+// 实时监听
 React.useEffect(()=>{
-const saved=localStorage.getItem("orders")
-if(saved) setOrders(JSON.parse(saved))
+db.ref("orders").on("value",snapshot=>{
+const data=snapshot.val()
+if(data) setOrders(Object.values(data))
+else setOrders([])
+})
 },[])
-
-React.useEffect(()=>{
-const handler=()=>{
-const saved=localStorage.getItem("orders")
-if(saved) setOrders(JSON.parse(saved))
-}
-window.addEventListener("storage",handler)
-return()=>window.removeEventListener("storage",handler)
-},[])
-
-const saveOrders=(data)=>{
-localStorage.setItem("orders",JSON.stringify(data))
-setOrders(data)
-}
 
 const add=i=>{
 setCart(p=>({...p,[i.id]:{...i,qty:(p[i.id]?.qty||0)+1}}))
@@ -71,24 +66,14 @@ setCart(p=>({...p,[i.id]:{...i,qty:(p[i.id]?.qty||0)+1}}))
 const remove=i=>{
 setCart(p=>{
 const q=(p[i.id]?.qty||0)-1
-if(q<=0){
-const n={...p}
-delete n[i.id]
-return n
-}
+if(q<=0){const n={...p};delete n[i.id];return n}
 return {...p,[i.id]:{...i,qty:q}}
 })
 }
 
 const submit=()=>{
-if(Object.keys(cart).length===0){
-alert("还没有点菜")
-return
-}
-const newOrders=[...orders,cart]
-saveOrders(newOrders)
+db.ref("orders").push(cart)
 setCart({})
-setShowCart(false)
 alert("点菜成功")
 }
 
@@ -107,7 +92,9 @@ if(isAdmin){
 return(
 <div class="p-4 max-w-md mx-auto">
 
-<h1 class="text-xl font-bold mb-3">总订单</h1>
+<h1 class="text-xl font-bold mb-3">
+实时总订单
+</h1>
 
 {Object.values(merged).map(i=>(
 <div class="flex justify-between border-b py-2">
@@ -121,11 +108,8 @@ return(
 </div>
 
 <button
-class="mt-4 w-full bg-red-500 text-white p-3 rounded"
-onClick={()=>{
-localStorage.removeItem("orders")
-setOrders([])
-}}
+class="mt-4 w-full bg-red-500 text-white p-3"
+onClick={()=>db.ref("orders").remove()}
 >
 清空订单
 </button>
@@ -138,151 +122,52 @@ const filtered=category==="全部"
 ?menu
 :menu.filter(i=>i.category===category)
 
-const cartItems=Object.values(cart)
-
-const cartTotal=cartItems.reduce(
-(s,i)=>s+i.price*i.qty,0
-)
-
-const cartCount=cartItems.reduce(
-(s,i)=>s+i.qty,0
-)
-
 return(
-<div class="max-w-md mx-auto pb-28">
+<div class="max-w-md mx-auto pb-24">
 
-<div class="flex overflow-x-auto gap-2 p-2 sticky top-0 bg-white z-10">
-
+<div class="flex overflow-x-auto gap-2 p-2 sticky top-0 bg-white">
 {categories.map(c=>(
 <button
-class={`px-3 py-1 rounded-full border whitespace-nowrap ${category===c?"bg-black text-white":"bg-white"}`}
+class={`px-3 py-1 rounded-full border ${category===c?"bg-black text-white":""}`}
 onClick={()=>setCategory(c)}
 >
 {c}
 </button>
 ))}
-
 </div>
 
 {filtered.map(i=>{
-
 const qty=cart[i.id]?.qty||0
 
 return(
 <div class="border m-2 rounded-xl overflow-hidden">
-
 <img src={i.image} class="w-full h-40 object-cover"/>
 
-<div class="p-2 flex justify-between items-center">
-
+<div class="p-2 flex justify-between">
 <div>
 <div class="font-bold">{i.name}</div>
-<div class="text-gray-500">¥{i.price}</div>
+<div>¥{i.price}</div>
 </div>
 
-<div class="flex items-center gap-2">
-
-<button
-class="px-3 border rounded"
-onClick={()=>remove(i)}
->
--
-</button>
-
-<div class="w-6 text-center">
-{qty}
+<div class="flex gap-2">
+<button onClick={()=>remove(i)}>-</button>
+<div>{qty}</div>
+<button onClick={()=>add(i)}>+</button>
 </div>
 
-<button
-class="px-3 bg-black text-white rounded"
-onClick={()=>add(i)}
->
-+
-</button>
-
-</div>
 </div>
 </div>
 )
 })}
 
-<div class="fixed bottom-0 left-0 right-0 bg-white p-3 border-t">
-
+<div class="fixed bottom-0 left-0 right-0 p-3 bg-white">
 <button
-class="w-full bg-black text-white p-3 rounded-lg"
-onClick={()=>setShowCart(true)}
->
-购物车 {cartCount} 件 ｜ ¥{cartTotal}
-</button>
-
-</div>
-
-
-{showCart && (
-
-<div class="fixed inset-0 bg-black/40 z-50">
-
-<div class="absolute bottom-0 left-0 right-0 bg-white p-4 rounded-t-2xl max-h-[80vh] overflow-auto">
-
-<div class="flex justify-between mb-3">
-<h2 class="font-bold text-lg">购物车</h2>
-<button onClick={()=>setShowCart(false)}>关闭</button>
-</div>
-
-{cartItems.length===0 && (
-<div class="text-gray-500">还没有点菜</div>
-)}
-
-{cartItems.map(i=>(
-
-<div class="flex justify-between border-b py-2">
-
-<div>
-<div>{i.name}</div>
-<div class="text-sm text-gray-500">
-¥{i.price} × {i.qty}
-</div>
-</div>
-
-<div class="flex items-center gap-2">
-
-<button
-class="px-2 border"
-onClick={()=>remove(i)}
->
--
-</button>
-
-<div>{i.qty}</div>
-
-<button
-class="px-2 bg-black text-white"
-onClick={()=>add(i)}
->
-+
-</button>
-
-</div>
-
-</div>
-
-))}
-
-<div class="mt-3 font-bold text-lg">
-总价 ¥{cartTotal}
-</div>
-
-<button
-class="mt-3 w-full bg-black text-white p-3 rounded"
+class="w-full bg-black text-white p-3"
 onClick={submit}
 >
 提交点菜
 </button>
-
 </div>
-</div>
-
-)}
 
 </div>
 )
