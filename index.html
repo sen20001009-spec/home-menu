@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>点菜菜单</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+
+const menu = [
+{ id:1,name:"红烧肉",price:38,image:"https://images.unsplash.com/photo-1604908176997-431c3c1d76fd?q=80&w=800"},
+{ id:2,name:"宫保鸡丁",price:32,image:"https://images.unsplash.com/photo-1603133872878-684f208fb84b?q=80&w=800"},
+{ id:3,name:"番茄炒蛋",price:18,image:"https://images.unsplash.com/photo-1625944525903-b0f5dc4f9b9c?q=80&w=800"},
+{ id:4,name:"可乐鸡翅",price:28,image:"https://images.unsplash.com/photo-1600891964599-f61ba0e24092?q=80&w=800"}
+]
+
+function App(){
+const [cart,setCart]=React.useState({})
+const isAdmin = window.location.hash==="#admin"
+
+const add=(i)=>{
+setCart(p=>({...p,[i.id]:{...i,qty:(p[i.id]?.qty||0)+1}}))
+}
+
+const remove=(i)=>{
+setCart(p=>{
+const q=(p[i.id]?.qty||0)-1
+if(q<=0){const n={...p};delete n[i.id];return n}
+return {...p,[i.id]:{...i,qty:q}}
+})
+}
+
+if(isAdmin){
+const items=Object.values(cart)
+const total=items.reduce((s,i)=>s+i.price*i.qty,0)
+
+return (
+<div class="p-4 max-w-md mx-auto">
+<h1 class="text-xl font-bold mb-3">总订单</h1>
+{items.map(i=>(
+<div class="flex justify-between border-b py-2">
+<div>{i.name} × {i.qty}</div>
+<div>¥{i.price*i.qty}</div>
+</div>
+))}
+<div class="font-bold mt-3">总价 ¥{total}</div>
+</div>
+)
+}
+
+return (
+<div class="max-w-md mx-auto pb-24">
+{menu.map(i=>(
+<div class="border m-2 rounded-xl overflow-hidden">
+<img src={i.image} class="w-full h-40 object-cover"/>
+<div class="p-2 flex justify-between">
+<div>
+<div class="font-bold">{i.name}</div>
+<div>¥{i.price}</div>
+</div>
+<div class="flex gap-2">
+<button class="px-3 border" onClick={()=>remove(i)}>-</button>
+<button class="px-3 bg-black text-white" onClick={()=>add(i)}>+</button>
+</div>
+</div>
+</div>
+))}
+
+<div class="fixed bottom-0 left-0 right-0 bg-white p-3 border-t">
+<button class="w-full bg-black text-white p-3"
+onClick={()=>alert("已提交")}>
+提交点菜
+</button>
+</div>
+</div>
+)
+}
+
+ReactDOM.render(<App/>,document.getElementById("root"))
+</script>
+</body>
+</html>
