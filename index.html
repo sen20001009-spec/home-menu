@@ -96,8 +96,13 @@ db.ref("orders").push({
 time:Date.now(),
 items:cart
 })
+
 setCart({})
 setShowCart(false)
+
+setTimeout(()=>{
+alert("点菜成功")
+},100)
 }
 
 // 后台汇总
