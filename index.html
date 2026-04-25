@@ -6,9 +6,6 @@
 
 <script src="https://cdn.tailwindcss.com"></script>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-
 <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -20,29 +17,17 @@
 
 <script type="text/babel">
 
-const firebaseConfig = {
-apiKey: "AIzaSyDkMpnfSC_uQU4869GHmxbz9TIDfMDNoG4",
-authDomain: "menu-7fc98.firebaseapp.com",
-projectId: "menu-7fc98",
-storageBucket: "menu-7fc98.firebasestorage.app",
-messagingSenderId: "1059212365850",
-appId: "1:1059212365850:web:98a1c41a406d026d5c01a3"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
 const menu = [
 { id:1,name:"卤鸡腿",price:7,category:"热菜",image:"食物图/卤鸡腿.jpg"},
 { id:2,name:"四喜烤麸",price:28,category:"凉菜",image:"食物图/四喜烤麸.jpg"},
 { id:3,name:"水煮鱼片",price:68,category:"热菜",image:"食物图/水煮鱼片.jpg"},
 { id:4,name:"火锅",price:9999,category:"热菜",image:"食物图/火锅.jpg"},
-{ id:5,name:"糖醋里脊",price:39,category:"热菜",image:"食物图/糖醋里脊.jpg"},
+{ id:5,name:"糖醋里脊",price:39,category:"热菜",image:"食物图/卤鸡腿.jpg"},
 { id:6,name:"蟹炒年糕",price:88,category:"热菜",image:"食物图/蟹炒年糕.jpg"},
 { id:7,name:"辣子鸡",price:66,category:"热菜",image:"食物图/辣子鸡.jpg"},
 { id:8,name:"酱鸭",price:99,category:"热菜",image:"食物图/酱鸭.jpg"},
 { id:9,name:"锅包肉",price:39,category:"热菜",image:"食物图/锅包肉.jpg"},
-{ id:10,name:"青椒肉丝",price:29,category:"热菜",image:"食物图/青椒肉丝.jpg"},
+{ id:10,name:"青椒肉丝",price:29,category:"热菜",image:"食物图/青椒肉丝.jpg"}
 ]
 
 function App(){
@@ -57,14 +42,17 @@ const [preview,setPreview]=React.useState(null)
 
 const categories=["全部",...new Set(menu.map(i=>i.category))]
 
-// 实时监听
+// 读取订单
 React.useEffect(()=>{
-db.ref("orders").on("value",snapshot=>{
-const data=snapshot.val()
-if(data) setOrders(Object.values(data))
-else setOrders([])
-})
+const data=localStorage.getItem("orders")
+if(data) setOrders(JSON.parse(data))
 },[])
+
+// 保存订单
+const saveOrders=(data)=>{
+localStorage.setItem("orders",JSON.stringify(data))
+setOrders(data)
+}
 
 const add=i=>{
 setCart(p=>({...p,[i.id]:{...i,qty:(p[i.id]?.qty||0)+1}}))
@@ -73,17 +61,24 @@ setCart(p=>({...p,[i.id]:{...i,qty:(p[i.id]?.qty||0)+1}}))
 const remove=i=>{
 setCart(p=>{
 const q=(p[i.id]?.qty||0)-1
-if(q<=0){const n={...p};delete n[i.id];return n}
+if(q<=0){
+const n={...p}
+delete n[i.id]
+return n
+}
 return {...p,[i.id]:{...i,qty:q}}
 })
 }
 
 const submit=()=>{
-db.ref("orders").push(cart)
+const newOrders=[...orders,cart]
+saveOrders(newOrders)
 setCart({})
+setShowCart(false)
 alert("点菜成功")
 }
 
+// 合并后台
 const merged={}
 orders.forEach(o=>{
 Object.values(o).forEach(i=>{
@@ -95,13 +90,12 @@ merged[i.id].qty+=i.qty
 const total=Object.values(merged)
 .reduce((s,i)=>s+i.price*i.qty,0)
 
+// 后台
 if(isAdmin){
 return(
 <div class="p-4 max-w-md mx-auto">
 
-<h1 class="text-xl font-bold mb-3">
-实时总订单
-</h1>
+<h1 class="text-xl font-bold mb-3">总订单</h1>
 
 {Object.values(merged).map(i=>(
 <div class="flex justify-between border-b py-2">
@@ -116,7 +110,10 @@ return(
 
 <button
 class="mt-4 w-full bg-red-500 text-white p-3"
-onClick={()=>db.ref("orders").remove()}
+onClick={()=>{
+localStorage.removeItem("orders")
+setOrders([])
+}}
 >
 清空订单
 </button>
@@ -125,7 +122,7 @@ onClick={()=>db.ref("orders").remove()}
 )
 }
 
-const filtered=category==="全部"
+const filtered=category==="全部
 ?menu
 :menu.filter(i=>i.category===category)
 
@@ -148,12 +145,13 @@ const qty=cart[i.id]?.qty||0
 
 return(
 <div class="border m-2 rounded-xl overflow-hidden">
+
 <img 
-src={i.image} 
+src={i.image}
 class="w-full h-40 object-cover"
 onClick={()=>setPreview(i)}
 />
-  
+
 <div class="p-2 flex justify-between">
 <div>
 <div class="font-bold">{i.name}</div>
@@ -179,67 +177,38 @@ onClick={()=>setShowCart(true)}
 查看购物车
 </button>
 </div>
+
 {showCart && (
-
 <div class="fixed inset-0 bg-black/40 z-50">
+<div class="absolute bottom-0 left-0 right-0 bg-white p-4 rounded-t-2xl">
 
-<div class="absolute bottom-0 left-0 right-0 bg-white p-4 rounded-t-2xl max-h-[80vh] overflow-auto">
-
-<div class="flex justify-between mb-3">
-<h2 class="font-bold text-lg">购物车</h2>
-<button onClick={()=>setShowCart(false)}>关闭</button>
-</div>
+<h2 class="font-bold mb-3">购物车</h2>
 
 {Object.values(cart).map(i=>(
-
-<div class="flex justify-between border-b py-2">
-
-<div>
-<div>{i.name}</div>
-<div class="text-sm text-gray-500">
-¥{i.price} × {i.qty}
+<div class="flex justify-between py-2 border-b">
+<div>{i.name} × {i.qty}</div>
+<div>¥{i.price*i.qty}</div>
 </div>
-</div>
-
-<div class="flex gap-2">
-<button onClick={()=>remove(i)}>-</button>
-<div>{i.qty}</div>
-<button onClick={()=>add(i)}>+</button>
-</div>
-
-</div>
-
 ))}
 
 <button
-class="mt-4 w-full bg-black text-white p-3"
-onClick={()=>{
-submit()
-setShowCart(false)
-}}
+class="mt-3 w-full bg-black text-white p-3"
+onClick={submit}
 >
 确认提交
 </button>
 
 </div>
 </div>
-
 )}
 
 {preview && (
-
 <div 
 class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center"
 onClick={()=>setPreview(null)}
 >
-
-<img 
-src={preview.image}
-class="max-w-full max-h-full rounded"
-/>
-
+<img src={preview.image} class="max-w-full max-h-full"/>
 </div>
-
 )}
 
 </div>
@@ -249,6 +218,5 @@ class="max-w-full max-h-full rounded"
 ReactDOM.render(<App/>,document.getElementById("root"))
 
 </script>
-
 </body>
 </html>
