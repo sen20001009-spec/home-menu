@@ -6,6 +6,9 @@
 
 <script src="https://cdn.tailwindcss.com"></script>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
 <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -16,6 +19,18 @@
 <div id="root"></div>
 
 <script type="text/babel">
+
+const firebaseConfig = {
+apiKey: "AIzaSyDkMpnfSC_uQU4869GHmxbz9TIDfMDNoG4",
+authDomain: "menu-7fc98.firebaseapp.com",
+projectId: "menu-7fc98",
+storageBucket: "menu-7fc98.firebasestorage.app",
+messagingSenderId: "1059212365850",
+appId: "1:1059212365850:web:98a1c41a406d026d5c01a3"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
 const menu = [
 { id:1,name:"卤鸡腿",price:7,category:"热菜",image:"食物图/卤鸡腿.jpg"},
@@ -40,19 +55,25 @@ const [category,setCategory]=React.useState("全部")
 const [showCart,setShowCart]=React.useState(false)
 const [preview,setPreview]=React.useState(null)
 
-const categories=["全部",...new Set(menu.map(i=>i.category))]
+// 固定分类
+const categories = [
+"全部",
+"热菜",
+"凉菜",
+"点心",
+"饮品",
+"汤",
+"减脂菜"
+]
 
-// 读取订单
+// 实时监听
 React.useEffect(()=>{
-const data=localStorage.getItem("orders")
-if(data) setOrders(JSON.parse(data))
+db.ref("orders").on("value",snapshot=>{
+const data=snapshot.val()
+if(data) setOrders(Object.entries(data))
+else setOrders([])
+})
 },[])
-
-// 保存订单
-const saveOrders=(data)=>{
-localStorage.setItem("orders",JSON.stringify(data))
-setOrders(data)
-}
 
 const add=i=>{
 setCart(p=>({...p,[i.id]:{...i,qty:(p[i.id]?.qty||0)+1}}))
@@ -71,17 +92,18 @@ return {...p,[i.id]:{...i,qty:q}}
 }
 
 const submit=()=>{
-const newOrders=[...orders,cart]
-saveOrders(newOrders)
+db.ref("orders").push({
+time:Date.now(),
+items:cart
+})
 setCart({})
 setShowCart(false)
-alert("点菜成功")
 }
 
-// 合并后台
+// 合并订单
 const merged={}
-orders.forEach(o=>{
-Object.values(o).forEach(i=>{
+orders.forEach(([id,o])=>{
+Object.values(o.items||{}).forEach(i=>{
 if(!merged[i.id]) merged[i.id]={...i,qty:0}
 merged[i.id].qty+=i.qty
 })
@@ -95,7 +117,9 @@ if(isAdmin){
 return(
 <div class="p-4 max-w-md mx-auto">
 
-<h1 class="text-xl font-bold mb-3">总订单</h1>
+<h1 class="text-xl font-bold mb-3">
+实时总订单
+</h1>
 
 {Object.values(merged).map(i=>(
 <div class="flex justify-between border-b py-2">
@@ -110,22 +134,41 @@ return(
 
 <button
 class="mt-4 w-full bg-red-500 text-white p-3"
-onClick={()=>{
-localStorage.removeItem("orders")
-setOrders([])
-}}
+onClick={()=>db.ref("orders").remove()}
 >
 清空订单
 </button>
+
+<h2 class="mt-6 font-bold text-lg">
+历史点单
+</h2>
+
+{orders.map(([id,o])=>(
+<div class="border mt-3 p-2 rounded">
+
+<div class="text-sm text-gray-500">
+{new Date(o.time).toLocaleString()}
+</div>
+
+{Object.values(o.items||{}).map(i=>(
+<div class="flex justify-between text-sm">
+<div>{i.name} × {i.qty}</div>
+<div>¥{i.price*i.qty}</div>
+</div>
+))}
+
+</div>
+))}
 
 </div>
 )
 }
 
-const filtered = category === "全部"
-? menu
-: menu.filter(i => i.category === category)
-  
+// 点菜界面
+const filtered = category==="全部"
+?menu
+:menu.filter(i=>i.category===category)
+
 return(
 <div class="max-w-md mx-auto pb-24">
 
