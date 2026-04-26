@@ -38,15 +38,17 @@ const menu = [
 { id:2,name:"四喜烤麸",price:28,category:"凉菜",image:"食物图/四喜烤麸.jpg"},
 { id:3,name:"水煮鱼片",price:68,category:"热菜",image:"食物图/水煮鱼片.jpg"},
 { id:4,name:"火锅",price:9999,category:"热菜",image:"食物图/火锅.jpg"},
-{ id:5,name:"糖醋里脊",price:39,category:"热菜",image:"食物图/糖醋里脊.jpg"},
+{ id:5,name:"糖醋里脊",price:39,category:"热菜",image:"食物图/卤鸡腿.jpg"},
 { id:6,name:"蟹炒年糕",price:88,category:"热菜",image:"食物图/蟹炒年糕.jpg"},
 { id:7,name:"辣子鸡",price:66,category:"热菜",image:"食物图/辣子鸡.jpg"},
 { id:8,name:"酱鸭",price:99,category:"热菜",image:"食物图/酱鸭.jpg"},
 { id:9,name:"锅包肉",price:39,category:"热菜",image:"食物图/锅包肉.jpg"},
-{ id:10,name:"青椒肉丝",price:29,category:"热菜",image:"食物图/青椒肉丝.jpg"},
+{ id:10,name:"青椒肉丝",price:29,category:"热菜",image:"食物图/青椒肉丝.jpg"}
 ]
 
 function App(){
+
+const isAdmin = window.location.hash === "#admin"
 
 const [cart,setCart]=React.useState({})
 const [orders,setOrders]=React.useState([])
@@ -63,6 +65,52 @@ const data=s.val()
 setOrders(data?Object.values(data):[])
 })
 },[])
+
+/* 后台页面 */
+if(isAdmin){
+
+const merged={}
+
+orders.forEach(o=>{
+Object.values(o).forEach(i=>{
+if(!merged[i.id]) merged[i.id]={...i,qty:0}
+merged[i.id].qty+=i.qty
+})
+})
+
+const total=Object.values(merged)
+.reduce((s,i)=>s+i.price*i.qty,0)
+
+return(
+<div class="p-4 max-w-md mx-auto">
+
+<h1 class="text-xl font-bold mb-3">
+实时总订单
+</h1>
+
+{Object.values(merged).map(i=>(
+<div class="flex justify-between border-b py-2">
+<div>{i.name} × {i.qty}</div>
+<div>¥{i.price*i.qty}</div>
+</div>
+))}
+
+<div class="font-bold mt-3 text-lg">
+总价 ¥{total}
+</div>
+
+<button
+class="mt-4 w-full bg-red-600 text-white p-3 rounded"
+onClick={()=>db.ref("orders").remove()}
+>
+清空订单
+</button>
+
+</div>
+)
+}
+
+/* 前台 */
 
 const add=i=>{
 setCart(p=>({...p,[i.id]:{...i,qty:(p[i.id]?.qty||0)+1}}))
@@ -87,7 +135,9 @@ setShowCart(false)
 setSuccess(true)
 }
 
-const filtered=category==="全部"?menu:menu.filter(i=>i.category===category)
+const filtered=category==="全部"
+?menu
+:menu.filter(i=>i.category===category)
 
 const totalCount=Object.values(cart).reduce((s,i)=>s+i.qty,0)
 const totalPrice=Object.values(cart).reduce((s,i)=>s+i.qty*i.price,0)
@@ -95,13 +145,10 @@ const totalPrice=Object.values(cart).reduce((s,i)=>s+i.qty*i.price,0)
 return(
 <div class="pb-32">
 
-{/* header */}
-<div class="bg-gradient-to-r from-red-700 to-red-900 p-4 text-white shadow-lg">
-<div class="text-xl font-bold">老铁烧烤</div>
-<div class="text-xs opacity-70">在线点菜系统</div>
+<div class="bg-gradient-to-r from-red-700 to-red-900 p-4 text-white">
+<div class="text-xl font-bold">在线点菜</div>
 </div>
 
-{/* 分类 */}
 <div class="flex gap-2 overflow-x-auto p-3 bg-white sticky top-0">
 {categories.map(c=>(
 <button
@@ -113,7 +160,6 @@ onClick={()=>setCategory(c)}
 ))}
 </div>
 
-{/* 菜单 */}
 <div class="grid grid-cols-2 gap-3 p-3">
 {filtered.map(i=>{
 const qty=cart[i.id]?.qty||0
@@ -129,13 +175,13 @@ onClick={()=>setPreview(i)}
 
 <div class="p-2">
 <div class="font-bold">{i.name}</div>
-<div class="text-red-700 font-bold">¥{i.price}</div>
+<div class="text-red-700">¥{i.price}</div>
 
-<div class="flex justify-end items-center gap-2 mt-2">
+<div class="flex justify-end gap-2 mt-2">
 
 {qty>0 && (
 <button onClick={()=>remove(i)}
-class="w-7 h-7 rounded-full border border-red-700 text-red-700">
+class="w-7 h-7 rounded-full border border-red-700">
 -
 </button>
 )}
@@ -144,8 +190,7 @@ class="w-7 h-7 rounded-full border border-red-700 text-red-700">
 
 <button
 onClick={()=>add(i)}
-class="w-7 h-7 rounded-full bg-red-700 text-white"
->
+class="w-7 h-7 rounded-full bg-red-700 text-white">
 +
 </button>
 
@@ -157,24 +202,20 @@ class="w-7 h-7 rounded-full bg-red-700 text-white"
 })}
 </div>
 
-{/* 购物车浮动 */}
 {totalCount>0 && (
 <div
 onClick={()=>setShowCart(true)}
-class="fixed bottom-4 left-4 right-4 bg-red-700 text-white p-3 rounded-full flex justify-between shadow-lg"
+class="fixed bottom-4 left-4 right-4 bg-red-700 text-white p-3 rounded-full flex justify-between"
 >
-<div>🛒 {totalCount}件</div>
+<div>🛒 {totalCount}</div>
 <div>¥{totalPrice}</div>
 </div>
 )}
 
-{/* 购物车 */}
 {showCart && (
 <div class="fixed inset-0 bg-black/40 flex items-end">
 
-<div class="bg-white w-full rounded-t-2xl p-4">
-
-<h2 class="font-bold mb-2">购物车</h2>
+<div class="bg-white w-full p-4 rounded-t-2xl">
 
 {Object.values(cart).map(i=>(
 <div class="flex justify-between border-b py-2">
@@ -194,14 +235,12 @@ onClick={submit}
 </div>
 )}
 
-{/* 成功 */}
 {success && (
 <div class="fixed inset-0 bg-black/40 flex items-center justify-center">
 
 <div class="bg-white p-6 rounded-xl text-center">
 
-<div class="text-3xl mb-2">✅</div>
-<div class="font-bold mb-3">点菜成功</div>
+<div class="text-2xl mb-2">点菜成功</div>
 
 <button
 class="bg-red-700 text-white px-6 py-2 rounded-full"
@@ -214,7 +253,6 @@ onClick={()=>setSuccess(false)}
 </div>
 )}
 
-{/* 图片放大 */}
 {preview && (
 <div
 class="fixed inset-0 bg-black/80 flex items-center justify-center"
@@ -228,9 +266,8 @@ onClick={()=>setPreview(null)}
 )
 }
 
-ReactDOM.render(<App/>,document.getElementById("root"))
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>)
 
 </script>
-
 </body>
 </html>
